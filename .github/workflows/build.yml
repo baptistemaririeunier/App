@@ -1,13 +1,28 @@
-name: Build
-on: [pull_request, push]
+name: Build App
+
+on:
+  push:
+    branches: [ "master", "main" ]
+  pull_request:
+    branches: [ "master", "main" ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      - name: Install C++ toolchain
-        uses: numworks/setup-arm-toolchain@latest
-      - name: Run make
-        run: make
+    - uses: actions/checkout@v4
+
+    - name: Install ARM Toolchain
+      uses: meik38/setup-arm-gnu-toolchain@v2
+      with:
+        arm-gnu-toolchain-version: '13.2.rel1'
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Build NWA App
+      run: |
+        make build
