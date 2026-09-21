@@ -5,7 +5,7 @@ NWLINK = npx --yes nwlink@latest
 BUILD_DIR = target
 TARGET = app.nwa
 
-EADK_DIR = eadk
+EADK_DIR = eadk-sdk
 CPPFLAGS = -Os -Wall -std=c++11 -fno-rtti -fno-exceptions -nostdlib -I. -Isrc -I$(EADK_DIR)
 
 SRCS = $(wildcard src/*.cpp)
@@ -16,9 +16,12 @@ all: build
 build: $(EADK_DIR) $(TARGET)
 
 $(EADK_DIR):
-	@echo "Downloading EADK headers..."
+	@echo "Downloading full EADK SDK..."
 	@mkdir -p $(EADK_DIR)
-	@curl -sL https://raw.githubusercontent.com/numworks/eadk/master/eadk.h -o $(EADK_DIR)/eadk.h
+	@curl -sL https://github.com/numworks/eadk/archive/refs/heads/master.zip -o eadk.zip
+	@python3 -c "import zipfile; zipfile.ZipFile('eadk.zip').extractall('extracted_eadk')"
+	@cp -r extracted_eadk/eadk-master/* $(EADK_DIR)/
+	@rm -rf eadk.zip extracted_eadk
 
 $(BUILD_DIR)/src/%.o: src/%.cpp
 	@mkdir -p $(dir $@)
