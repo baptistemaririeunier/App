@@ -1,73 +1,34 @@
-Q ?= @
-CC = arm-none-eabi-gcc
-CXX = arm-none-eabi-g++
+Toolchain ?= arm-none-eabi-
+CXX = $(Toolchain)g++
+NWLINK = npx --yes nwlink@latest
+
 BUILD_DIR = target
-NWLINK = npx --yes -- nwlink@0.0.16
-LINK_GC = 1
-LTO = 1
+TARGET = app.nwa
 
-define object_for
-$(addprefix $(BUILD_DIR)/,$(addsuffix .o,$(basename $(1))))
-endef
+# Téléchargement et inclusion des en-têtes EADK si absents
+EADK_DIR = eadk
+CPPFLAGS = -Os -Wall -std=c++11 -fno-rtti -fno-exceptions -nostdlib -I. -Isrc -I$(EADK_DIR)/include
 
-src = $(addprefix src/,\
-  alien.cpp \
-  life.cpp \
-  main.cpp \
-  rocket.cpp \
-  spaceship.cpp \
-  score.cpp \
-)
+SRCS = $(wildcard src/*.cpp)
+OBJS = $(patsubsct src/%.cpp, $(BUILD_DIR)/src/%.o, $(SRCS))
 
-CPPFLAGS = -std=c++11 -fno-exceptions
-CPPFLAGS += -Os -Wall
-CPPFLAGS += $(shell $(NWLINK) eadk-cflags)
-LDFLAGS = -Wl,--relocatable
-LDFLAGS += -nostartfiles
-LDFLAGS += --specs=nano.specs
+all: build
 
-ifeq ($(LINK_GC),1)
-CPPFLAGS += -fdata-sections -ffunction-sections
-LDFLAGS += -Wl,-e,main -Wl,-u,eadk_app_name -Wl,-u,eadk_app_icon -Wl,-u,eadk_api_level
-LDFLAGS += -Wl,--gc-sections
-endif
+build: $(EADK_DIR) $(TARGET)
 
-ifeq ($(LTO),1)
-CPPFLAGS += -flto -fno-fat-lto-objects
-CPPFLAGS += -fwhole-program
-CPPFLAGS += -fvisibility=internal
-LDFLAGS += -flinker-output=nolto-rel
-endif
+$(EADK_DIR):
+	@echo "Fetching EADK headers..."
+	@mkdir -p $(EADK_DIR)
+	@$(NWLINK) eadk-install $(EADK_DIR) || git clone --depth 1 https://github.com/numworks/eadk.gperf.git $(EADK_DIR) || true
 
-.PHONY: build
-build: $(BUILD_DIR)/voord.bin
+$(BUILD_DIR)/src/%.o: src/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CPPFLAGS) -c $< -o $@
 
-.PHONY: run
-run: $(BUILD_DIR)/voord.nwa
-	@echo "INSTALL $<"
-	$(Q) $(NWLINK) install-nwa $<
+$(TARGET): $(OBJS)
+	$(NWLINK) eadk-link $^ -o $@
 
-$(BUILD_DIR)/%.bin: $(BUILD_DIR)/%.nwa
-	@echo "BIN     $@"
-	$(Q) $(NWLINK) nwa-bin $< $@
-
-$(BUILD_DIR)/voord.nwa: $(call object_for,$(src)) $(BUILD_DIR)/icon.o
-	@echo "LD      $@"
-	$(Q) $(CC) $(CPPFLAGS) $(LDFLAGS) $^ -o $@
-
-$(addprefix $(BUILD_DIR)/,%.o): %.cpp | $(BUILD_DIR)
-	@echo "CXX     $^"
-	$(Q) $(CXX) $(CPPFLAGS) $(SFLAGS) -c $^ -o $@
-
-$(BUILD_DIR)/icon.o: src/icon.png
-	@echo "ICON    $<"
-	$(Q) $(NWLINK) png-icon-o $< $@
-
-.PRECIOUS: $(BUILD_DIR)
-$(BUILD_DIR):
-	$(Q) mkdir -p $@/src
-
-.PHONY: clean
 clean:
-	@echo "CLEAN"
-	$(Q) rm -rf $(BUILD_DIR)
+	rm -rf $(BUILD_DIR) $(TARGET) $(EADK_DIR)
+
+.PHONY: all build clean
