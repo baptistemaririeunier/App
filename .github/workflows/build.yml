@@ -14,12 +14,11 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Setup ARM GCC Toolchain
-      uses: supplypike/setup-bin@v4
-      with:
-        name: arm-none-eabi-gcc
-        version: '10.3-2021.10'
-        uri: 'https://developer.arm.com/-/media/Files/downloads/gnu-rm/10.3-2021.10/gcc-arm-none-eabi-10.3-2021.10-x86_64-linux.tar.bz2'
+    - name: Download and Install ARM Toolchain
+      run: |
+        wget -q https://developer.arm.com/-/media/Files/downloads/gnu-rm/10.3-2021.10/gcc-arm-none-eabi-10.3-2021.10-x86_64-linux.tar.bz2
+        tar -xjf gcc-arm-none-eabi-10.3-2021.10-x86_64-linux.tar.bz2
+        echo "$PWD/gcc-arm-none-eabi-10.3-2021.10/bin" >> $GITHUB_PATH
 
     - name: Set up Node.js
       uses: actions/setup-node@v4
