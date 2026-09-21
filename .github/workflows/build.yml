@@ -11,17 +11,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-    - name: Install ARM Toolchain via APT
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y gcc-arm-none-eabi g++-arm-none-eabi
+    - name: Setup ARM GCC Toolchain
+      uses: supplypike/setup-bin@v1
+      with:
+        name: arm-none-eabi-gcc
+        version: '10.3-2021.10'
+        download-url: https://developer.arm.com/-/media/Files/downloads/gnu-rm/10.3-2021.10/gcc-arm-none-eabi-10.3-2021.10-x86_64-linux.tar.bz2
 
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '20'
+        node-version: '22'
 
     - name: Build NWA App
       run: |
