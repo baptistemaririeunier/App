@@ -1,36 +1,34 @@
-name: Build App
+Toolchain ?= arm-none-eabi-
+CXX = $(Toolchain)g++
+NWLINK = npx --yes nwlink@latest
 
-on:
-  push:
-    branches: [ "master", "main" ]
-  pull_request:
-    branches: [ "master", "main" ]
+BUILD_DIR = target
+TARGET = app.nwa
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
+# Téléchargement et inclusion des en-têtes EADK si absents
+EADK_DIR = eadk
+CPPFLAGS = -Os -Wall -std=c++11 -fno-rtti -fno-exceptions -nostdlib -I. -Isrc -I$(EADK_DIR)/include
 
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+SRCS = $(wildcard src/*.cpp)
+OBJS = $(patsubsct src/%.cpp, $(BUILD_DIR)/src/%.o, $(SRCS))
 
-    - name: Download and Install ARM Toolchain
-      run: |
-        wget -q https://developer.arm.com/-/media/Files/downloads/gnu-rm/10.3-2021.10/gcc-arm-none-eabi-10.3-2021.10-x86_64-linux.tar.bz2
-        tar -xjf gcc-arm-none-eabi-10.3-2021.10-x86_64-linux.tar.bz2
-        echo "$PWD/gcc-arm-none-eabi-10.3-2021.10/bin" >> $GITHUB_PATH
+all: build
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '22'
+build: $(EADK_DIR) $(TARGET)
 
-    - name: Build NWA App
-      run: |
-        make build
+$(EADK_DIR):
+	@echo "Fetching EADK headers..."
+	@mkdir -p $(EADK_DIR)
+	@$(NWLINK) eadk-install $(EADK_DIR) || git clone --depth 1 https://github.com/numworks/eadk.gperf.git $(EADK_DIR) || true
 
-    - name: Upload NWA Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: numworks-app
-        path: app.nwa
+$(BUILD_DIR)/src/%.o: src/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CPPFLAGS) -c $< -o $@
+
+$(TARGET): $(OBJS)
+	$(NWLINK) eadk-link $^ -o $@
+
+clean:
+	rm -rf $(BUILD_DIR) $(TARGET) $(EADK_DIR)
+
+.PHONY: all build clean
